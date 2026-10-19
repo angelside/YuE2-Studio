@@ -1662,7 +1662,7 @@ async fn assistant_runtime_remove(
     // is on disk, and the model that was chosen with it.
     let ids: Vec<String> = if request.asset_id == "managed" || request.asset_id == "cuda" || request.asset_id == "cpu" {
         let chosen = state.assistant.read().await.managed_model.clone();
-        ["llama-cuda", "llama-cuda-runtime", "llama-cuda12", "llama-cuda12-runtime", "llama-vulkan", "llama-cpu"].iter().map(|id| id.to_string()).chain(chosen).collect()
+        ["llama-cuda", "llama-cuda-runtime","llama-cuda12", "llama-cuda12-runtime", "llama-vulkan", "llama-cpu", "llama-linux-cpu", "llama-linux-vulkan", "llama-linux-cuda", "llama-linux-cuda-runtime", "llama-linux-cuda12", "llama-linux-cuda12-runtime"].iter().map(|id| id.to_string()).chain(chosen).collect()
     } else {
         vec![request.asset_id.clone()]
     };
@@ -5350,10 +5350,14 @@ async fn assistant_runtime_status(State(state): State<AppState>) -> Json<Value> 
 /// The card build is useless without its runtime companion - two downloads
 /// that are one decision, the same way a recogniser is.
 fn assistant_set(device: &str) -> Vec<&'static str> {
-    match (device, assistant_runtime::card_flavour()) {
-        ("cpu", _) | (_, None) => vec!["llama-cpu"],
-        (_, Some("cuda12")) => vec!["llama-cuda12", "llama-cuda12-runtime"],
-        (_, Some("vulkan")) => vec!["llama-vulkan"],
+    match (device, cfg!(target_os = "linux"), assistant_runtime::card_flavour()) {
+        ("cpu", true, _) | (_, true, None) => vec!["llama-linux-cpu"],
+        ("cpu", false, _) | (_, false, None) => vec!["llama-cpu"],
+        (_, true, Some("cuda12")) => { vec!["llama-linux-cuda12", "llama-linux-cuda12-runtime"] }
+        (_, true, Some("cuda")) => { vec!["llama-linux-cuda", "llama-linux-cuda-runtime"] }
+        (_, true, Some("vulkan")) => vec!["llama-linux-vulkan"],
+        (_, false, Some("vulkan")) => vec!["llama-vulkan"],
+        (_, false, Some("cuda12")) => vec!["llama-cuda12", "llama-cuda12-runtime"],
         _ => vec!["llama-cuda", "llama-cuda-runtime"],
     }
 }

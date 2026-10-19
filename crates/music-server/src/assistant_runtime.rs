@@ -195,6 +195,82 @@ pub const ASSETS: &[Asset] = &[
         vram_gb: None,
         note: "For machines without a graphics card, or for choosing the processor. Slow, but it works.",
     },
+
+    // Linux
+    Asset {
+        id: "llama-linux-cpu",
+        label: "llama.cpp runtime (Linux CPU)",
+        kind: AssetKind::Runtime,
+        url: "https://github.com/ggml-org/llama.cpp/releases/download/b11236/llama-b11236-bin-ubuntu-x64.tar.gz",
+        relative_path: "runtime/llama-linux-cpu.tar.gz",
+        bytes: 17_406_283,
+        unzip_into: Some("cpu"),
+        marker: "llama-server",
+        vram_gb: None,
+        note: "Linux CPU build for machines without GPU acceleration.",
+    },
+    Asset {
+        id: "llama-linux-vulkan",
+        label: "llama.cpp runtime (Linux Vulkan)",
+        kind: AssetKind::Runtime,
+        url: "https://github.com/ggml-org/llama.cpp/releases/download/b11236/llama-b11236-bin-ubuntu-vulkan-x64.tar.gz",
+        relative_path: "runtime/llama-linux-vulkan.tar.gz",
+        bytes: 31_351_800,
+        unzip_into: Some("vulkan"),
+        marker: "llama-server",
+        vram_gb: None,
+        note: "Linux Vulkan build for AMD, Intel and NVIDIA GPUs.",
+    },
+    // Linux CUDA 13.4
+    Asset {
+        id: "llama-linux-cuda",
+        label: "llama.cpp runtime (Linux CUDA 13.4)",
+        kind: AssetKind::Runtime,
+        url: "https://github.com/ggml-org/llama.cpp/releases/download/b11236/llama-b11236-bin-ubuntu-cuda-13.4-x64.tar.gz",
+        relative_path: "runtime/llama-linux-cuda.tar.gz",
+        bytes: 152_868_922,
+        unzip_into: Some("cuda"),
+        marker: "llama-server",
+        vram_gb: None,
+        note: "Linux CUDA 13.4 build for supported NVIDIA GPUs.",
+    },
+    Asset {
+        id: "llama-linux-cuda-runtime",
+        label: "Linux CUDA 13.4 runtime libraries",
+        kind: AssetKind::Runtime,
+        url: "https://github.com/ggml-org/llama.cpp/releases/download/b11236/cudart-llama-b11236-bin-ubuntu-cuda-13.4-x64.tar.gz",
+        relative_path: "runtime/llama-linux-cudart.tar.gz",
+        bytes: 440_236_534,
+        unzip_into: Some("cuda"),
+        marker: "cudart64",
+        vram_gb: None,
+        note: "CUDA libraries required by the Linux CUDA 13.4 build.",
+    },
+    // Linux CUDA 12.8
+    Asset {
+        id: "llama-linux-cuda12",
+        label: "llama.cpp runtime (Linux CUDA 12.8)",
+        kind: AssetKind::Runtime,
+        url: "https://github.com/ggml-org/llama.cpp/releases/download/b11236/llama-b11236-bin-ubuntu-cuda-12.8-x64.tar.gz",
+        relative_path: "runtime/llama-linux-cuda12.tar.gz",
+        bytes: 172_237_886,
+        unzip_into: Some("cuda12"),
+        marker: "llama-server",
+        vram_gb: None,
+        note: "Linux CUDA 12.8 build for NVIDIA GPUs requiring CUDA 12.",
+    },
+    Asset {
+        id: "llama-linux-cuda12-runtime",
+        label: "Linux CUDA 12.8 runtime libraries",
+        kind: AssetKind::Runtime,
+        url: "https://github.com/ggml-org/llama.cpp/releases/download/b11236/cudart-llama-b11236-bin-ubuntu-cuda-12.8-x64.tar.gz",
+        relative_path: "runtime/llama-linux-cudart12.tar.gz",
+        bytes: 594_377_263,
+        unzip_into: Some("cuda12"),
+        marker: "cudart64",
+        vram_gb: None,
+        note: "CUDA libraries required by the Linux CUDA 12.8 build.",
+    }
 ];
 
 /// The llama.cpp build this machine's card runs: CUDA 13 on Turing and newer
@@ -497,7 +573,7 @@ impl AssistantRuntime {
             let target = self.path_of(asset);
             let outcome = match download_asset(&self.http, asset, &target, &self.state, base, self.cancel.clone()).await {
                 Ok(()) => match asset.unzip_into {
-                    Some(flavour) => extract_zip(&target, &self.root.join("runtime").join(flavour)),
+                    Some(flavour) => crate::downloads::extract_archive(&target, &self.root.join("runtime").join(flavour)),
                     None => Ok(()),
                 },
                 Err(error) => Err(error),
@@ -555,7 +631,7 @@ impl AssistantRuntime {
             match outcome {
                 Ok(()) => {
                     let extraction = match asset.unzip_into {
-                        Some(flavour) => extract_zip(&target, &root.join("runtime").join(flavour)),
+                        Some(flavour) => crate::downloads::extract_archive(&target, &root.join("runtime").join(flavour)),
                         None => Ok(()),
                     };
                     if let Some(progress) = guard.download.as_mut() {
