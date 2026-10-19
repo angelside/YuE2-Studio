@@ -671,6 +671,26 @@ impl AssistantRuntime {
         }
         hide_console(&mut command);
 
+        // Prefer the engine's bundled libraries over AppImage libraries.
+        #[cfg(target_os = "linux")]
+        {
+            let engine_dir = binary
+                .parent()
+                .context("the engine executable has no folder")?;
+
+            let mut library_paths = vec![engine_dir.to_path_buf()];
+
+            if let Some(existing) = std::env::var_os("LD_LIBRARY_PATH") {
+                library_paths.extend(std::env::split_paths(&existing));
+            }
+
+            command.env(
+                "LD_LIBRARY_PATH",
+                std::env::join_paths(library_paths)
+                    .context("construct engine LD_LIBRARY_PATH")?,
+            );
+        }
+
         let child = command
             .spawn()
             .with_context(|| format!("start llama-server {}", binary.display()))?;
